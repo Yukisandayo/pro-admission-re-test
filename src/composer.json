@@ -13,7 +13,7 @@
         "laravel/sanctum": "^2.11",
         "laravel/tinker": "^2.5",
         "nesbot/carbon": "^2.72",
-        "stripe/stripe-php": "^9.9"
+        "stripe/stripe-php": "^17.5"
     },
     "require-dev": {
         "facade/ignition": "^2.5",

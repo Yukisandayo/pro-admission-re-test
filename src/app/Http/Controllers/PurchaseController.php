@@ -20,72 +20,66 @@ class PurchaseController extends Controller
         return view('purchase',compact('item','user'));
     }
 
-    public function purchase($item_id, Request $request){
-        $item = Item::find($item_id);
-        $stripe = new StripeClient(config('stripe.stripe_secret_key'));
-
-        [
-            $user_id,
-            $amount,
-            $sending_postcode,
-            $sending_address,
-            $sending_building
-        ] = [
-            Auth::id(),
-            $item->price,
-            $request->destination_postcode,
-            //ASCIIコードに日本語はないため、住所と建物名はエンコードする必要あり
-            urlencode($request->destination_address),
-            urlencode($request->destination_building) ?? null
-        ];
+    public function purchase($item_id, Request $request)
+    {
+        $item = Item::findOrFail($item_id);
+        $stripe = new \Stripe\StripeClient(config('stripe.stripe_secret_key'));
 
         $checkout_session = $stripe->checkout->sessions->create([
             'payment_method_types' => [$request->payment_method],
-            'payment_method_options' => [
-                'konbini' => [
-                    'expires_after_days' => 7,
+            'line_items' => [[
+                'price_data' => [
+                'currency' => 'jpy',
+                'product_data' => ['name' => $item->name],
+                'unit_amount' => $item->price,
                 ],
-            ],
-            'line_items' => [
-                [
-                    'price_data' => [
-                        'currency' => 'jpy',
-                        'product_data' => ['name' => $item->name],
-                        'unit_amount' => $item->price,
-                    ],
-                    'quantity' => 1,
-                ],
-            ],
+                'quantity' => 1,
+            ]],
             'mode' => 'payment',
-            'success_url' => "http://localhost/purchase/{$item_id}/success?user_id={$user_id}&amount={$amount}&sending_postcode={$sending_postcode}&sending_address={$sending_address}&sending_building={$sending_building}",
+            'success_url' => route('checkout.success'),
+            'cancel_url'  => route('checkout.cancel'),
+            'metadata' => [
+                'user_id' => Auth::id(),
+                'item_id' => $item->id,
+                'sending_postcode' => $request->destination_postcode,
+                'sending_address' => $request->destination_address,
+                'sending_building' => $request->destination_building,
+            ],
         ]);
 
         return redirect($checkout_session->url);
     }
 
-    public function success($item_id, Request $request){
-        //無事決済が成功した後に動くメソッドのため、決済以外でHTTPリクエストが送られた時用にクエリパラメータを検閲
-        if(!$request->user_id || !$request->amount || !$request->sending_postcode || !$request->sending_address){
-            throw new Exception("You need all Query Parameters (user_id, amount, sending_postcode, sending_address)");
+
+    public function webhook(Request $request)
+    {
+        $payload = $request->getContent();
+        $sig_header = $request->header('Stripe-Signature');
+        $endpoint_secret = config('stripe.webhook_secret');
+
+        try {
+            $event = \Stripe\Webhook::constructEvent(
+                $payload, $sig_header, $endpoint_secret
+            );
+        } catch (\UnexpectedValueException $e) {
+            return response('Invalid payload', 400);
+        } catch (\Stripe\Exception\SignatureVerificationException $e) {
+            return response('Invalid signature', 400);
         }
 
-        $stripe = new StripeClient(config('stripe.stripe_secret_key'));
+        if ($event->type === 'checkout.session.completed') {
+            $session = $event->data->object;
 
-        $stripe->charges->create([
-            'amount' => $request->amount,
-            'currency' => 'jpy',
-            'source' => 'tok_visa',
-        ]);
+            SoldItem::create([
+                'user_id' => $session->metadata->user_id,
+                'item_id' => $session->metadata->item_id,
+                'sending_postcode' => $session->metadata->sending_postcode,
+                'sending_address' => $session->metadata->sending_address,
+                'sending_building' => $session->metadata->sending_building,
+            ]);
+        }
 
-        SoldItem::create([
-            'user_id' => $request->user_id,
-            'item_id' => $item_id,
-            'sending_postcode' => $request->sending_postcode,
-            'sending_address' => $request->sending_address,
-            'sending_building' => $request->sending_building ?? null,
-        ]);
-
-        return redirect('/')->with('flashSuccess', '決済が完了しました！');
+        return response('Webhook handled', 200);
     }
 
     public function address($item_id, Request $request){

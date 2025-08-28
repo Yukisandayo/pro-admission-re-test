@@ -35,11 +35,11 @@ class ItemController extends Controller
 
         return view('index',compact('items','tab', 'search'));
     }
-    
+
     public function detail(Item $item){
         return view('detail', compact('item'));
     }
-    
+
     public function search(Request $request){
         $search_word = $request->search_item;
         $query = Item::query();

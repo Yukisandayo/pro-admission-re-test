@@ -9,14 +9,14 @@ use Illuminate\Support\Facades\Auth;
 class Item extends Model
 {
     use HasFactory;
-    
+
     protected $fillable = [
         'name',
         'price',
         'brand',
         'description',
         'img_url',
-        'user_id', 
+        'user_id',
         'condition_id',
     ];
 
@@ -78,6 +78,14 @@ class Item extends Model
 
     public static function scopeItem($query, $item_name){
         return $query->where('name', 'like', '%'.$item_name.'%');
+    }
+
+    public function transactions() {
+        return $this->hasMany(Transaction::class);
+    }
+
+    public function chats() {
+        return $this->hasManyThrough(Chat::class, Transaction::class);
     }
 
 }

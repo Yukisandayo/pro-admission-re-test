@@ -8,6 +8,8 @@ use App\Models\Profile;
 use App\Models\User;
 use App\Models\Item;
 use App\Models\SoldItem;
+use App\Models\Transaction;
+use App\Models\Chat;
 use App\Http\Requests\ProfileRequest;
 use Illuminate\Support\Facades\Storage;
 
@@ -57,13 +59,27 @@ class UserController extends Controller
 
     public function mypage(Request $request){
         $user = User::find(Auth::id());
+        $items = collect();
+        $transactions = collect();
+        $totalUnread = 0;
         if ($request->page == 'buy'){
             $items = SoldItem::where('user_id', $user->id)->get()->map(function ($sold_item) {
                 return $sold_item->item;
-            });         
+            });
+        } elseif ($request->page == 'ongoing') {
+            $transactions = Transaction::where('buyer_id', $user->id)
+                ->orWhere('seller_id', $user->id)
+                ->with(['item.chats' => function ($q) use ($user) {
+                    $q->where('is_read', false)->where('user_id', '!=', $user->id);
+                }])
+                ->get();
+
+                $totalUnread = $transactions->sum(function ($transaction) {
+                    return $transaction->item->chats->count();
+                });
         }else {
             $items = Item::where('user_id', $user->id)->get();
         }
-        return view('mypage', compact('user', 'items'));
+        return view('mypage', compact('user', 'items', 'transactions', 'totalUnread'));
     }
 }

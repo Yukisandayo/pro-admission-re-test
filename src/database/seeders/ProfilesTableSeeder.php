@@ -29,5 +29,13 @@ class ProfilesTableSeeder extends Seeder
             'building' => 'クロスオフィス三田',
         ];
         Profile::create($param);
+
+        $param = [
+            'user_id' => 3,
+            'postcode' => '1080014',
+            'address' => '東京都港区芝5丁目29-20610',
+            'building' => 'クロスオフィス三田',
+        ];
+        Profile::create($param);
     }
 }
