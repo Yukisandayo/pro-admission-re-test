@@ -4,28 +4,50 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use App\Models\User;
 use App\Models\Transaction;
 use App\Models\Chat;
+use App\Models\ChatImage;
 use App\Http\Requests\ChatRequest;
 
 class ChatController extends Controller
 {
     public function store(ChatRequest $request, Transaction $transaction)
     {
-        $chat = $transaction->chats()->create([
-            'user_id' => Auth::id(),
-            'message' => $request->message,
-        ]);
+        $uploadedPaths = [];
 
-        if ($request->hasFile('images')) {
-            foreach ($request->file('images') as $file) {
-                $path = $file->store('chats','public');
-                $chat->images()->create(['img_url'=>$path]);
+        try {
+            DB::transaction(function () use ($request, $transaction, &$uploadedPaths) {
+                $chat = $transaction->chats()->create([
+                    'user_id' => Auth::id(),
+                    'message' => $request->message,
+                    'is_read' => false,
+                ]);
+
+                if ($request->hasFile('images')) {
+                    foreach ($request->file('images') as $file) {
+                        $path = $file->store('chats', 'public');
+                        $uploadedPaths[] = $path;
+
+                        $chat->images()->create([
+                            'img_url' => $path
+                        ]);
+                    }
+                }
+            });
+
+            return back()->with('flashSuccess', 'メッセージを送信しました。');
+
+        } catch (\Exception $e) {
+            foreach ($uploadedPaths as $path) {
+                Storage::disk('public')->delete($path);
             }
-        }
+            \Log::error("チャット/画像保存エラー: " . $e->getMessage());
 
-        return back();
+            return back()->with('error', 'メッセージの送信に失敗しました。時間をおいて再度お試しください。');
+        }
     }
 
     public function update(ChatRequest $request, Chat $chat)
@@ -45,4 +67,3 @@ class ChatController extends Controller
         return response()->json(['success' => true]);
     }
 }
-

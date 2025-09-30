@@ -15,15 +15,11 @@ class CreateReviewsTable extends Migration
     {
         Schema::create('reviews', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('transaction_id');
-            $table->unsignedBigInteger('reviewer_id');
-            $table->unsignedBigInteger('reviewed_id');
+            $table->foreignId('transaction_id')->constrained()->onDelete('cascade');
+            $table->foreignId('reviewer_id')->constrained('users')->onDelete('cascade');
+            $table->foreignId('reviewed_id')->constrained('users')->onDelete('cascade');
             $table->tinyInteger('rating');
             $table->timestamps();
-
-            $table->foreign('transaction_id')->references('id')->on('transactions')->onDelete('cascade');
-            $table->foreign('reviewer_id')->references('id')->on('users')->onDelete('cascade');
-            $table->foreign('reviewed_id')->references('id')->on('users')->onDelete('cascade');
         });
     }
 

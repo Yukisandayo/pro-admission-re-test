@@ -45,9 +45,9 @@
     </div>
     <div class="border">
         <ul class="border__list">
-            <li><a href="/mypage?page=sell">出品した商品</a></li>
-            <li><a href="/mypage?page=buy">購入した商品</a></li>
-            <li><a href="/mypage?page=ongoing">取引中の商品</a>
+            <li><a href="/mypage?page=sell" class="{{ (request('page') === 'sell' || !request('page')) ? 'active' : '' }}">出品した商品</a></li>
+            <li><a href="/mypage?page=buy" class="{{ request('page') === 'buy' ? 'active' : '' }}">購入した商品</a></li>
+            <li><a href="/mypage?page=ongoing" class="{{ request('page') === 'ongoing' ? 'active' : '' }}">取引中の商品</a>
             @if($totalUnread > 0)
                 <span class="badge">{{$totalUnread}}</span>
             @endif
@@ -59,8 +59,11 @@
         @foreach($transactions as $transaction)
             <div class="item">
                 <a href="{{ route('transactions.chat', $transaction->id) }}">
-                    <div class="item__img--container {{ $transaction->item->sold() ? 'sold' : '' }}">
+                    <div class="item__img--container">
                         <img src="{{ \Storage::url($transaction->item->img_url) }}" class="item__img" alt="商品画像">
+                        @if($transaction->unread_count > 0)
+                            <span class="badge badge--img">{{ $transaction->unread_count }}</span>
+                        @endif
                     </div>
                     <p class="item__name">{{ $transaction->item->name }}</p>
                 </a>

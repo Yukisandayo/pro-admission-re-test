@@ -10,6 +10,7 @@ use App\Models\Item;
 use App\Models\User;
 use App\Models\SoldItem;
 use App\Models\Profile;
+use App\Models\Transaction;
 use Stripe\StripeClient;
 
 class PurchaseController extends Controller
@@ -76,6 +77,13 @@ class PurchaseController extends Controller
                 'sending_postcode' => $session->metadata->sending_postcode,
                 'sending_address' => $session->metadata->sending_address,
                 'sending_building' => $session->metadata->sending_building,
+            ]);
+
+            Transaction::create([
+                'item_id'   => $session->metadata->item_id,
+                'buyer_id'  => $session->metadata->user_id,
+                'seller_id' => \App\Models\Item::find($session->metadata->item_id)->user_id,
+                'status'    => 'ongoing',
             ]);
         }
 

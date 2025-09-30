@@ -30,7 +30,7 @@ class UserController extends Controller
         }else{
             $img_url = '';
         }
-        
+
         $profile = Profile::where('user_id', Auth::id())->first();
         if ($profile){
             $profile->update([
@@ -47,38 +47,46 @@ class UserController extends Controller
                 'postcode' => $request->postcode,
                 'address' => $request->address,
                 'building' => $request->building
-            ]);    
+            ]);
         }
 
         User::find(Auth::id())->update([
             'name' => $request->name
         ]);
-        
+
         return redirect('/');
     }
 
     public function mypage(Request $request){
         $user = User::find(Auth::id());
+        $userId = $user->id;
         $items = collect();
         $transactions = collect();
-        $totalUnread = 0;
-        if ($request->page == 'buy'){
-            $items = SoldItem::where('user_id', $user->id)->get()->map(function ($sold_item) {
+
+        $allTransactions = Transaction::where('buyer_id', $userId)
+        ->orWhere('seller_id', $userId)
+        ->orderByRaw('
+            COALESCE(
+                (SELECT created_at FROM chats WHERE transaction_id = transactions.id ORDER BY created_at DESC LIMIT 1),
+                transactions.created_at
+            ) DESC
+        ')
+        ->withCount(['chats as unread_count' => function ($q) use ($userId) {$q->where('is_read', false)->where('user_id', '!=', $userId);
+            }])
+        ->get();
+
+        $totalUnread = $allTransactions->sum('unread_count');
+
+        if ($request->page == 'buy') {
+            $items = SoldItem::where('user_id', $userId)->get()->map(function ($sold_item) {
                 return $sold_item->item;
             });
+            $transactions = collect();
         } elseif ($request->page == 'ongoing') {
-            $transactions = Transaction::where('buyer_id', $user->id)
-                ->orWhere('seller_id', $user->id)
-                ->with(['item.chats' => function ($q) use ($user) {
-                    $q->where('is_read', false)->where('user_id', '!=', $user->id);
-                }])
-                ->get();
-
-                $totalUnread = $transactions->sum(function ($transaction) {
-                    return $transaction->item->chats->count();
-                });
-        }else {
-            $items = Item::where('user_id', $user->id)->get();
+            $transactions = $allTransactions;
+        } else {
+            $items = Item::where('user_id', $userId)->get();
+            $transactions = collect();
         }
         return view('mypage', compact('user', 'items', 'transactions', 'totalUnread'));
     }

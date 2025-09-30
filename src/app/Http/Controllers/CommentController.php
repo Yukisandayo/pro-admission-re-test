@@ -19,22 +19,6 @@ class CommentController extends Controller
         $comment->comment = $request->comment;
         $comment->save();
 
-        $item = Item::findOrFail($item_id);
-
-        $existingTransaction = Transaction::where('item_id', $item_id)
-            ->where('buyer_id', Auth::id())
-            ->where('seller_id', $item->user_id)
-            ->first();
-
-        if (!$existingTransaction) {
-            $transaction = new Transaction();
-            $transaction->item_id = $item_id;
-            $transaction->buyer_id = Auth::id();
-            $transaction->seller_id = $item->user_id;
-            $transaction->status = 'ongoing';
-            $transaction->save();
-        }
-
         return back()->with('flashSuccess', 'コメントを送信しました！');
     }
 }

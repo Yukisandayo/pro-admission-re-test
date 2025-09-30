@@ -83,4 +83,9 @@ class User extends Authenticatable implements MustVerifyEmail
     public function averageRating() {
         return $this->reviewsReceived()->avg('rating');
     }
+
+    public function routeNotificationForMail($notification)
+    {
+        return $this->email;
+    }
 }

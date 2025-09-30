@@ -71,7 +71,11 @@
                     <div class="comment">
                         <div class="comment__user">
                             <div class="user__img">
-                                <img src="{{ \Storage::url($comment->user->profile->img_url) }}" alt="">
+                                @if (isset($comment->user->profile->img_url))
+                                    <img src="{{ \Storage::url($comment->user->profile->img_url) }}" alt="">
+                                @else
+                                    <img id="myImage" class="user__img" src="{{ asset('img/icon.png') }}" alt="">
+                                @endif
                             </div>
                             <p class="user__name">{{$comment->user->name}}</p>
                         </div>

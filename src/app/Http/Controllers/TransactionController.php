@@ -7,14 +7,20 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 use App\Models\Chat;
 use App\Models\Transaction;
+use App\Notifications\TransactionCompletedNotification;
 
 class TransactionController extends Controller
 {
     public function showChat(Transaction $transaction)
     {
-        if (Auth::id() !== $transaction->buyer_id && Auth::id() !== $transaction->seller_id) {
+        if (Auth::id() !== $transaction->buyer_id &&     Auth::id() !== $transaction->seller_id) {
             abort(403);
         }
+
+        $transaction->chats()
+            ->where('user_id', '!=', Auth::id())
+            ->where('is_read', false)
+            ->update(['is_read' => true]);
 
         $chats = $transaction->chats()->with('user')->get();
 
@@ -25,12 +31,19 @@ class TransactionController extends Controller
     {
         $transaction = Transaction::findOrFail($transaction_id);
 
+        if ($transaction->status === 'completed') {
+            return redirect()->route('items.list')->with('error', 'この取引は既に完了しています。');
+        }
+
         if (Auth::id() !== $transaction->buyer_id || $transaction->status !== 'ongoing') {
             return back()->with('error', 'この操作は許可されていません。');
         }
 
-        $transaction->status = 'completed';
-        $transaction->save();
+        $seller = $transaction->seller;
+
+        if ($seller) {
+            $seller->notify(new TransactionCompletedNotification($transaction));
+        }
 
         return back()->with('completed', true)->with('flashSuccess', '取引が完了しました。評価をお願いします。');
     }

@@ -10,11 +10,19 @@
 @section('content')
 @include('components.header')
 
+@php
+    $currentUser = Auth::user();
+
+    $buyerTransactions = $currentUser->transactionsAsBuyer;
+    $sellerTransactions = $currentUser->transactionsAsSeller;
+
+    $relatedTransactions = $buyerTransactions->merge($sellerTransactions)->unique('id')->sortByDesc('updated_at');
+@endphp
 <div class="main-layout-container">
     {{-- サイドバー（取引中の商品一覧） --}}
     <div class="chat-sidebar">
         <h3>その他の取引</h3>
-        @foreach($transaction->buyer->transactionsAsBuyer as $t)
+        @foreach($relatedTransactions as $t)
             <a href="{{ route('transactions.chat',$t->id) }}"class="chat-sidebar__item {{ $transaction->id === $t->id ? 'active' : '' }}">
                 <p class="chat-sidebar__name">{{ $t->item->name }}</p>
             </a>
@@ -23,18 +31,37 @@
 
     {{-- メインコンテンツエリア --}}
     <div class="main-content">
+        @php
+            $isReviewedByMe = \App\Models\Review::where('transaction_id', $transaction->id)
+                                    ->where('reviewer_id', Auth::id())
+                                    ->exists();
+            $isBuyerReviewed = \App\Models\Review::where('transaction_id', $transaction->id)
+                                    ->where('reviewer_id', $transaction->buyer_id)
+                                    ->exists();
+            $targetUser = (Auth::id() === $transaction->buyer_id) ? $transaction->seller : $transaction->buyer;
+        @endphp
         <div class="chat-header">
             <div class="seller-user-info">
                 <div class="seller-user-icon">
-                    <img src="{{ $transaction->seller->profile->img_url ? Storage::url($transaction->seller->profile->img_url) : asset('img/icon.png') }}" alt="">
+                    <img src="{{ $targetUser->profile->img_url ? Storage::url($targetUser->profile->img_url) : asset('img/icon.png') }}" alt="">
                 </div>
             </div>
-            <h1 class="chat-header__title">「{{ $transaction->seller->name }}」さんとの取引画面</h1>
-            @if(Auth::id() === $transaction->buyer_id && $transaction->status === 'ongoing')
+            <h1 class="chat-header__title">「{{ $targetUser->name }}」さんとの取引画面</h1>
+            @if($transaction->status === 'ongoing')
+                @if(Auth::id() === $transaction->buyer_id && !$isReviewedByMe)
                 <form action="{{ route('transaction.complete', $transaction->id) }}" method="POST" class="chat-complete-form" id="completeTransactionForm">
                     @csrf
                     <button type="button" class="btn-complete" id="completeTransactionBtn">取引を完了する</button>
                 </form>
+                @elseif(Auth::id() === $transaction->seller_id && $isBuyerReviewed && !$isReviewedByMe)
+                    <button type="button" class="btn-complete" id="completeTransactionBtn">評価する</button>
+                @elseif(Auth::id() === $transaction->buyer_id && $isReviewedByMe)
+                    <p></p>
+                @elseif(Auth::id() === $transaction->seller_id && !$isBuyerReviewed)
+                    <p></p>
+                @endif
+            @elseif($transaction->status === 'completed')
+                <p></p>
             @endif
         </div>
 
@@ -55,28 +82,37 @@
                 <div class="chat-messages">
                     @foreach($chats as $chat)
                         <div class="chat-message {{ $chat->user_id == Auth::id() ? 'mine' : 'theirs' }}" data-id="{{ $chat->id }}">
-                            <div class="chat-user-info">
-                                <div class="chat-user-icon">
-                                    <img src="{{ $chat->user->profile->img_url ? Storage::url($chat->user->profile->img_url) : asset('img/icon.png') }}" alt="">
+                            <div class="chat-content-container">
+                                <div class="chat-user-info">
+                                    <div class="chat-user-icon">
+                                        <img src="{{ $chat->user->profile->img_url ? Storage::url($chat->user->profile->img_url) : asset('img/icon.png') }}" alt="">
+                                    </div>
+                                    <span class="chat-username">{{ $chat->user->name }}</span>
                                 </div>
-                                <span class="chat-username">{{ $chat->user->name }}</span>
-                            </div>
-                            <div class="chat-bubble-wrapper">
-                                <div class="chat-bubble">
-                                    <p class="chat-text">{{ $chat->message }}</p>
-                                    <form class="chat-edit-form" style="display:none;">
+                                <div class="chat-bubble-wrapper">
+                                    <div class="chat-bubble">
+                                        <p class="chat-text">{{ $chat->message }}</p>
+                                        @if($chat->images->isNotEmpty())
+                                            <div class="chat-images-container">
+                                                @foreach($chat->images as $image)
+                                                    <img src="{{ Storage::url($image->img_url) }}" alt="添付画像" class="chat-attached-image">
+                                                @endforeach
+                                            </div>
+                                        @endif
+                                        <form class="chat-edit-form" style="display:none;">
                                         @csrf
                                         <input type="text" name="message" class="chat-edit-input" value="{{ $chat->message }}">
                                         <button type="submit" class="btn-save">保存</button>
                                         <button type="button" class="btn-cancel">キャンセル</button>
-                                    </form>
-                                </div>
-                                @if($chat->user_id == Auth::id())
-                                    <div class="chat-actions">
-                                        <button type="button" class="chat-edit">編集</button>
-                                        <button type="button" class="chat-delete">削除</button>
+                                        </form>
                                     </div>
-                                @endif
+                                    @if($chat->user_id == Auth::id())
+                                        <div class="chat-actions">
+                                            <button type="button" class="chat-edit">編集</button>
+                                            <button type="button" class="chat-delete">削除</button>
+                                        </div>
+                                    @endif
+                                </div>
                             </div>
                         </div>
                     @endforeach
@@ -85,7 +121,22 @@
                 {{-- チャットフォーム --}}
                 <form action="{{ route('chats.store',$transaction->id) }}" method="post" enctype="multipart/form-data" class="chat-form">
                     @csrf
-                    <textarea name="message" required placeholder="取引メッセージを入力してください">{{ old('message') }}</textarea>
+                    <div class="form__error">
+                    @error('message')
+                        {{ $message }}
+                    @enderror
+                    </div>
+                    <div class="form__error">
+                    @error('images')
+                        {{ $message }}
+                    @enderror
+                    </div>
+                    <div class="form__error">
+                    @error('images.*')
+                        {{ $message }}
+                    @enderror
+                    </div>
+                    <textarea name="message" placeholder="取引メッセージを入力してください">{{ old('message') }}</textarea>
                     <label class="btn-image-add">
                         画像を追加
                         <input type="file" name="images[]" multiple accept="image/png,image/jpeg">
@@ -192,7 +243,12 @@
         if (completeBtn) {
             // 取引完了ボタンクリック時にモーダルを表示
             completeBtn.addEventListener('click', function() {
-                modal.style.display = 'flex';
+                if ("{{ Auth::id() }}" === "{{ $transaction->buyer_id }}" && "{{ !$isReviewedByMe }}" === "1"){
+                    document.getElementById('completeTransactionForm').submit();
+                }
+                else if ("{{ Auth::id() }}" === "{{ $transaction->seller_id }}" && "{{ $isBuyerReviewed }}" === "1" && "{{ !$isReviewedByMe }}" === "1") {
+                    modal.style.display = 'flex';
+                }
             });
         }
 
@@ -261,11 +317,10 @@
 // Form submission (評価送信後に取引完了処理を実行)
 document.getElementById('reviewForm').addEventListener('submit', function(e) {
     e.preventDefault();
-    
+
     if (selectedRating > 0) {
         const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-        
-        // 評価をAjaxで送信
+
         const formData = new FormData();
         formData.append('rating', selectedRating);
 
@@ -283,9 +338,8 @@ document.getElementById('reviewForm').addEventListener('submit', function(e) {
             return response.json();
         })
         .then(data => {
-            // 評価送信成功後、取引完了フォームを送信
             modal.style.display = 'none';
-            document.getElementById('completeTransactionForm').submit();
+            window.location.href = '{{ route("items.list") }}';
         })
         .catch(error => {
             alert('評価の送信に失敗しました。');

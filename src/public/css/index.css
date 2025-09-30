@@ -1,8 +1,8 @@
 .items{
+    margin-top: 30px;
     display: flex;
     flex-wrap: wrap;
-    justify-content: flex-start;
-    gap: 35px 10px;
+    gap: 90px;
 }
 
 .sold{
@@ -29,20 +29,18 @@
     z-index: 101;
 }
 
-.item__img--container{
-    background-color: rgb(208, 208, 208);
-    border-radius: 5px;
-    width: 15em;
-    height: 15em;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+.item__img--container {
+    position: relative;
+    width: 200px;
+    height: 200px;
+    overflow: hidden;
 }
 
-.item__img{
-    object-fit: cover;
+.item__img {
     width: 100%;
     height: 100%;
+    object-fit: cover;
+    border-radius: inherit;
 }
 
 .item__name{
@@ -65,6 +63,14 @@
 .border__list li{
     padding: 20px 80px;
     font-weight: bold;
+}
+
+.border__list a.active {
+    color: #c12748;
+}
+
+.border__list a:hover {
+    color: #c12748;
 }
 
 @media (min-width: 768px) and (max-width: 850px) {

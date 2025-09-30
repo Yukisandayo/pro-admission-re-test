@@ -6,29 +6,29 @@
 
 /* サイドバー */
 .chat-sidebar {
-    width: 250px;
-    background: #f4f4f4;
+    width: 200px;
+    background: gray;
     padding: 20px 10px;
     border-right: 1px solid #ddd;
+    text-align: center;
     overflow-y: auto;
 }
 
 .chat-sidebar h3 {
-    font-size: 14px;
+    font-size: 20px;
     font-weight: bold;
-    margin-bottom: 10px;
-    color: #555;
+    margin-bottom: 40px;
+    color: white;
     margin-top: 0;
 }
 
 .chat-sidebar__item {
     display: flex;
     align-items: center;
-    padding: 10px;
+    padding: 5px;
     border-radius: 5px;
-    margin-bottom: 5px;
+    margin: 20px 10px;
     transition: background-color 0.2s;
-    text-decoration: none;
     color: #333;
 }
 
@@ -50,7 +50,8 @@
 
 .chat-sidebar__name {
     flex: 1;
-    font-size: 14px;
+    font-size: 17px;
+    font-weight: bold;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -92,6 +93,7 @@
     cursor: pointer;
     white-space: nowrap;
     font-size: 14px;
+    margin-left: auto;
 }
 
 .btn-complete:hover {
@@ -114,18 +116,18 @@
 
 .seller-user-icon img {
     width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        object-fit: cover;
-        margin-bottom: 5px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-bottom: 5px;
 }
 
 .seller-user-info {
     display: flex;
-        flex-direction: column;
-        align-items: center;
-        margin-right: 10px;
-        font-size: 12px;
+    flex-direction: column;
+    align-items: flex-start;
+    margin-right: 10px;
+    font-size: 12px;
 }
 
 .chat-main-header {
@@ -161,8 +163,7 @@
 
 .chat-main-header__item .item__price {
     font-size: 14px;
-    color: #ff6e36;
-    margin: 0;
+    margin-top: 10px;
 }
 
 .chat-main-header__user {
@@ -192,16 +193,40 @@
 }
 
 .chat-message {
+    display: flex;
     align-items: flex-start;
     margin-bottom: 15px;
 }
 
-.chat-user-info {
+.chat-message.theirs {
+    justify-content: flex-start;
+}
+
+.chat-message.mine {
+    justify-content: flex-end;
+}
+
+.chat-content-container {
     display: flex;
     flex-direction: column;
-    align-items: end;
+    max-width: 70%;
+}
+
+.chat-message.mine .chat-content-container {
+    align-items: flex-end;
+}
+
+.chat-user-info {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
     margin-right: 10px;
+    margin-bottom: 5px;
     font-size: 12px;
+}
+
+.chat-user-icon {
+    margin: 0 7px;
 }
 
 .chat-user-icon img {
@@ -209,16 +234,13 @@
     height: 40px;
     border-radius: 50%;
     object-fit: cover;
-    margin-bottom: 5px;
-}
-
-.chat-message.mine {
-    flex-direction: row-reverse;
 }
 
 .chat-message.mine .chat-user-info {
     margin-right: 0;
     margin-left: 10px;
+    align-items: center;
+    flex-direction: row-reverse;
 }
 
 .chat-bubble-wrapper {
@@ -235,8 +257,7 @@
     background: #f1f1f1;
     border-radius: 10px;
     padding: 10px;
-    max-width: 70%;
-    writing-mode: horizontal-tb;
+    margin-bottom: 5px;
 }
 
 .chat-message.mine .chat-bubble {
@@ -257,7 +278,7 @@
 .chat-actions button {
     background: none;
     border: none;
-    color: #ff6e36;
+    color: black;
     cursor: pointer;
 }
 
@@ -272,6 +293,37 @@
     padding: 5px;
     border: 1px solid #ddd;
     border-radius: 5px;
+}
+
+.chat-images-container {
+    display: flex;
+    flex-wrap: wrap;
+    /* 複数画像を折り返す */
+    gap: 5px;
+    margin-top: 10px;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.chat-attached-image {
+    width: 100px;
+    /* 画像のサイズを調整 */
+    height: 100px;
+    object-fit: cover;
+    /* 画像をクロップして均一に表示 */
+    border-radius: 4px;
+    cursor: zoom-in;
+    /* クリックで拡大できるように */
+}
+
+/* 画像が単体の場合、幅を広げて見やすくする */
+.chat-images-container:has(img:only-child) .chat-attached-image {
+    width: 100%;
+    height: auto;
+    max-height: 250px;
+    /* 最大高さを制限 */
+    object-fit: contain;
+    /* 画像全体を表示 */
 }
 
 .chat-form {
