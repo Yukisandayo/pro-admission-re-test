@@ -63,8 +63,11 @@ class UserController extends Controller
         $items = collect();
         $transactions = collect();
 
-        $allTransactions = Transaction::where('buyer_id', $userId)
-        ->orWhere('seller_id', $userId)
+        $allTransactions = Transaction::where(function ($query) use ($userId) {
+            $query->where('buyer_id', $userId)
+                    ->orWhere('seller_id', $userId);
+        })
+        ->where('status', 'ongoing')
         ->orderByRaw('
             COALESCE(
                 (SELECT created_at FROM chats WHERE transaction_id = transactions.id ORDER BY created_at DESC LIMIT 1),
