@@ -119,27 +119,32 @@
                 </div>
 
                 {{-- チャットフォーム --}}
-                <form action="{{ route('chats.store',$transaction->id) }}" method="post" enctype="multipart/form-data" class="chat-form">
-                    @csrf
-                    <div class="form__error">
+                <div class="form__error">
+                    @error('message_or_image_required')
+                        {{ $message }}
+                    @enderror
+                </div>
+                <div class="form__error">
                     @error('message')
                         {{ $message }}
                     @enderror
-                    </div>
-                    <div class="form__error">
+                </div>
+                <div class="form__error">
                     @error('images')
                         {{ $message }}
                     @enderror
-                    </div>
-                    <div class="form__error">
+                </div>
+                <div class="form__error">
                     @error('images.*')
                         {{ $message }}
                     @enderror
-                    </div>
-                    <textarea name="message" placeholder="取引メッセージを入力してください">{{ old('message') }}</textarea>
+                </div>
+                <form action="{{ route('chats.store',$transaction->id) }}" method="post" enctype="multipart/form-data" class="chat-form">
+                    @csrf
+                    <textarea name="message" id="chatMessageInput" placeholder="取引メッセージを入力してください">{{ old('message') }}</textarea>
                     <label class="btn-image-add">
                         画像を追加
-                        <input type="file" name="images[]" multiple accept="image/png,image/jpeg">
+                        <input type="file" name="images[]" multiple>
                     </label>
                     <button type="submit" class="btn-send">送信</button>
                 </form>
@@ -163,7 +168,7 @@
     // JavaScript for chat edit/delete functions
     document.addEventListener('DOMContentLoaded', function() {
         const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-        
+
         // Edit and Cancel
         document.querySelectorAll('.chat-edit').forEach(btn => {
             btn.addEventListener('click', function() {
@@ -237,8 +242,30 @@
         const closeModal = document.getElementById('closeReviewModal');
         const modal = document.getElementById('reviewModal');
         const completeBtn = document.getElementById('completeTransactionBtn');
-        
+
         let selectedRating = 0;
+
+        const transactionId = "{{ $transaction->id }}";
+        const inputElement = document.getElementById('chatMessageInput');
+        const storageKey = 'chatMessage_' + transactionId;
+
+        if (inputElement) {
+            const savedMessage = localStorage.getItem(storageKey);
+            if (savedMessage) {
+                inputElement.value = savedMessage;
+            }
+
+            inputElement.addEventListener('input', function () {
+                localStorage.setItem(storageKey, inputElement.value);
+            });
+
+            const chatForm = document.querySelector('.chat-form');
+            if (chatForm) {
+                chatForm.addEventListener('submit', function() {
+                    localStorage.removeItem(storageKey);
+                });
+            }
+        }
 
         if (completeBtn) {
             // 取引完了ボタンクリック時にモーダルを表示
@@ -312,41 +339,39 @@
                 submitBtn.disabled = true;
             }
 
-            // ... 省略 ...
-
 // Form submission (評価送信後に取引完了処理を実行)
-document.getElementById('reviewForm').addEventListener('submit', function(e) {
-    e.preventDefault();
+        document.getElementById('reviewForm').addEventListener('submit', function(e) {
+            e.preventDefault();
 
-    if (selectedRating > 0) {
-        const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            if (selectedRating > 0) {
+                const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
-        const formData = new FormData();
-        formData.append('rating', selectedRating);
+                const formData = new FormData();
+                formData.append('rating', selectedRating);
 
-        fetch('{{ route("reviews.store", $transaction->id) }}', {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': token
-            },
-            body: formData
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Server responded with a non-200 status.');
+                fetch('{{ route("reviews.store", $transaction->id) }}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': token
+                    },
+                    body: formData
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Server responded with a non-200 status.');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    modal.style.display = 'none';
+                    window.location.href = '{{ route("items.list") }}';
+                })
+                .catch(error => {
+                    alert('評価の送信に失敗しました。');
+                    console.error('Error:', error);
+                });
             }
-            return response.json();
-        })
-        .then(data => {
-            modal.style.display = 'none';
-            window.location.href = '{{ route("items.list") }}';
-        })
-        .catch(error => {
-            alert('評価の送信に失敗しました。');
-            console.error('Error:', error);
         });
-    }
-});
         }
     });
 </script>

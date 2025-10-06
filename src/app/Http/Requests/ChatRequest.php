@@ -24,33 +24,18 @@ class ChatRequest extends FormRequest
     public function rules()
     {
         return [
-            'message' => 'required_without:images|nullable|string|max:400',
+            'message' => 'required|string|max:400',
             'images' => 'nullable|array|max:5',
             'images.*' => 'image|mimes:jpeg,png',
-        ];
-    }
-
-    public function after()
-    {
-        return [
-            function (\Illuminate\Validation\Validator $validator) {
-                if (empty($this->message) && !$this->hasFile('images')) {
-                    $validator->errors()->add(
-                        'message_or_image_required',
-                        'メッセージまたは画像を送信してください'
-                    );
-                }
-            }
         ];
     }
 
     public function messages()
     {
         return [
-            'message.required_without' => '本文を入力してください',
+            'message.required' => '本文を入力してください',
             'message.max' => '本文は400文字以内で入力してください',
             'images.*.mimes' => '「.png」または「.jpeg」形式でアップロードしてください',
-            'message_or_image_required' => 'メッセージまたは画像を送信してください'
         ];
     }
 }

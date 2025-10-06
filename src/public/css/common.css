@@ -170,7 +170,7 @@ header{
 
 .form__error{
     color: #ff333f;
-    margin-top: 8px;
+    margin: 8px;
 }
 
 .disable{
